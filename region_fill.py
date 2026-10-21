@@ -28,13 +28,13 @@ import time
 
 import numpy as np
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 DEFAULT_COLORS = ["#FFE600", "#FF8A1F", "#FFB3C7", "#1EA0E6", "#9ADCF0"]
 
 
 def version_stamp(t=None):
-    """保存名の既定：バージョン名＋年月日時分秒（例: v1.1.0_20261021-111530）。"""
+    """保存名の既定：バージョン名＋年月日時分秒（例: v1.2.0_20261021-111530）。"""
     t = time.localtime() if t is None else t
     return f"v{__version__}_{time.strftime('%Y%m%d-%H%M%S', t)}"
 
