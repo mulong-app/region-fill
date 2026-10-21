@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# GUI が自動で保存する設定と前回の絵（個人の作業データ）
+region_fill_settings*.json
+region_fill_settings*_last.svg
+*.tmp
+
+# 出力したファイル
+region_v*.svg
+region_v*.png
+region_fill_v*.json
+
+# OS
+.DS_Store
+Thumbs.db

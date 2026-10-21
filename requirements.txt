@@ -1,0 +1,4 @@
+numpy>=1.24
+# 以下はコマンドライン版で使うときだけ必要（GUI は numpy だけで動きます）
+opencv-python>=4.8   # --png で PNG を出力するとき
+Pillow>=10.0         # --palette-from で画像から配色を作るとき
