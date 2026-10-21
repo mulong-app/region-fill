@@ -28,7 +28,7 @@ import time
 
 import numpy as np
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 DEFAULT_COLORS = ["#FFE600", "#FF8A1F", "#FFB3C7", "#1EA0E6", "#9ADCF0"]
 

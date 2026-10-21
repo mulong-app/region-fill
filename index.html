@@ -320,7 +320,7 @@ function params(){
     min_radius:g("min_radius"), length:g("length"), max_bends:g("max_bends"), att_min:amin, att_max:amax,
     pull:g("pull"), avoid:g("avoid"), smooth:g("smooth"), pressure:g("pressure"),
     line_color:g("line_color"), bg:g("bg"), colors:colors.slice(),
-    auto:$("auto").checked, show_att:$("show_att").checked, png_scale:g("png_scale"), palette:selPal};
+    auto:$("auto").checked, show_att:$("show_att").checked, png_scale:g("png_scale"), palette:selPal, ver:VERSION};
 }
 
 // ---- 設定の反映・保存
@@ -875,9 +875,13 @@ $("reset_cfg").onclick=()=>{ pendingNote="既定の設定に戻しました"; ap
   try{
     const data=await getJSON("/api/settings");
     fillPresets(data.presets||{});
+    // v1.3.0 より前に保存された「前回の設定」は、線の太さが旧既定の 1.2% のままなので新しい既定 0.3% にする
+    let migrated=false;
+    if(data.last && !data.last.ver && Number(data.last.stroke)===1.2){ data.last.stroke=DEFAULTS.stroke; migrated=true; }
     if(data.last){ applySettings(data.last,false);
       pendingNote = "前回の設定を復元しました" + ($("auto").checked ? "" : "（自動で生成はオフです）"); }
-    if(data.last && data.view && data.view.svg){
+    if(migrated) pendingNote="前回の設定を復元しました（線の太さは新しい既定の 0.3% にしました）";
+    if(data.last && data.view && data.view.svg && !migrated){
       // 前回の絵をすぐに表示し、「色だけ変える」等に必要な計算だけ裏で行う
       lastAttractors=data.view.attractors||[]; showSvg(data.view.svg);
       setStatus(pendingNote.replace("復元しました","復元し、前回の絵を表示しています")); pendingNote="";

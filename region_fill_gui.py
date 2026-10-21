@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-region_fill.py のGUI（ブラウザで操作）。 v1.4.0
+region_fill.py のGUI（ブラウザで操作）。 v1.4.1
 
   python region_fill_gui.py            # ブラウザが自動で開きます
   python region_fill_gui.py --port 9000 --no-browser
