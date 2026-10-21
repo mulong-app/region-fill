@@ -63,6 +63,8 @@ button:disabled{opacity:.5;cursor:default}
 main{display:grid;grid-template-rows:auto 1fr auto;min-width:0}
 .bar{display:flex;gap:8px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
 .bar .grow{flex:1}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tools .check{white-space:nowrap}
 .status{color:var(--muted);font-variant-numeric:tabular-nums}
 .status.err{color:var(--err)}
 .stage{position:relative;display:flex;align-items:center;justify-content:center;padding:24px;min-height:0;overflow:auto}
@@ -81,7 +83,25 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
 .btnrow button{flex:1}
 .empty{color:var(--muted)}
 .foot{padding:8px 18px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);background:var(--panel)}
-@media (max-width:760px){.app{grid-template-columns:1fr;height:auto}aside{border-right:0;border-bottom:1px solid var(--line)}}
+/* スマホ・狭い画面：上半分に絵を常に表示し、下半分の設定だけをスクロール */
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:50vh minmax(0,1fr);height:100vh;height:100dvh}
+  main{grid-row:1;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);border-bottom:1px solid var(--line);min-height:0}
+  .bar,.tools{min-width:0}
+  aside{grid-row:2;border-right:0;min-height:0;padding:12px 14px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .foot{display:none}
+  .bar{padding:6px 10px;gap:6px}
+  .bar{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:4px}
+  .bar .status.grow{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ボタン類は1段にまとめ、入りきらない分は横にスクロール */
+  .tools{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px}
+  .tools::-webkit-scrollbar{display:none}
+  .tools>*{flex:0 0 auto}
+  .bar .estimate,.tools .check{font-size:11px}
+  .bar button,.bar select{padding:4px 8px;font-size:12px}
+  .stage{padding:8px}
+  .busy .card{padding:10px 16px}
+}
 </style>
 </head>
 <body>
@@ -139,7 +159,7 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
   </details>
 
   <details open><summary>線の見た目</summary>
-    <div class="row"><label>線の太さ <span class="v" id="v_stroke"></span></label><input id="stroke" type="range" min="0" max="4" step="0.1" value="1.2"><div class="hint">0 で線なし（塗りだけ）</div></div>
+    <div class="row"><label>線の太さ <span class="v" id="v_stroke"></span></label><input id="stroke" type="range" min="0" max="4" step="0.05" value="0.3"><div class="hint">0 で線なし（塗りだけ）</div></div>
     <div class="row"><label>線の強弱 <span class="v" id="v_pressure"></span></label><input id="pressure" type="range" min="0" max="1" step="0.05" value="0.5"></div>
     <div class="row colors2">
       <div><label>線の色</label><input id="line_color" type="color" value="#111111"></div>
@@ -161,22 +181,27 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
     <div class="row"><button id="recolor" style="width:100%">線はそのままで、色だけ変える</button></div>
   </details>
 
-  <details><summary>サイズ</summary>
+  <details open><summary>サイズ</summary>
+    <div class="row"><label>プリセット</label>
+      <div class="seed"><select id="size_preset"></select><button id="size_swap" title="縦と横を入れ替える">⇄ 縦横</button></div></div>
     <div class="row two">
       <div><label>幅 (px)</label><input id="width" type="number" min="200" max="4000" value="800"></div>
       <div><label>高さ (px)</label><input id="height" type="number" min="200" max="4000" value="500"></div>
     </div>
+    <div class="hint">線の太さ・最小半径は画面の短い辺に対する比率なので、サイズを変えても見た目の印象は同じです。生成時間も変わりません</div>
   </details>
 </aside>
 
 <main>
   <div class="bar">
     <span id="status" class="status grow">「生成」を押してください</span>
+    <div class="tools">
     <span id="estimate" class="estimate status" title="今の設定で1枚作るのにかかる時間の目安（実際にかかった時間から、このパソコンの速さに合わせて補正）"></span>
     <label class="check" style="margin:0" title="曲線の外側（背景）を透明にして、図形だけを保存します"><input id="transparent" type="checkbox"> 背景を透過</label>
     <button id="save_svg" disabled>SVGを保存</button>
     <select id="png_scale" style="width:auto"><option value="1">PNG 1倍</option><option value="2" selected>PNG 2倍</option><option value="4">PNG 4倍</option></select>
     <button id="save_png" disabled>PNGを保存</button>
+    </div>
   </div>
   <div class="stage">
     <div class="frame" id="frame" style="width:800px">
@@ -303,7 +328,7 @@ function applySettings(st, regenerate=true){
   selPal = st.palette || null;
   if(st.auto!==undefined) $("auto").checked=!!st.auto;
   if(st.show_att!==undefined) $("show_att").checked=!!st.show_att;
-  showVals(); renderSwatches(); renderPalettes(); fitFrame();
+  showVals(); renderSwatches(); renderPalettes(); syncSizePreset(); fitFrame();
   $("pal_note").textContent = selPal ? `配色「${selPal}」` : "";
   // 選んでいる配色が一覧の中で見えるように（サイドバー全体はスクロールさせない）
   const cur=document.querySelector("#pal_list .pal.sel"), box=$("pal_list");
@@ -455,10 +480,11 @@ async function getJSON(url){
 function setStatus(t, err){ const s=$("status"); s.textContent=t; s.className="status grow"+(err?" err":""); }
 
 function fitFrame(){
-  const p=params(), stage=document.querySelector(".stage");
-  const maxW=stage.clientWidth-48, maxH=stage.clientHeight-48;
+  const p=params(), stage=document.querySelector(".stage"), cs=getComputedStyle(stage);
+  const padX=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight), padY=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
+  const maxW=stage.clientWidth-padX, maxH=stage.clientHeight-padY;
   const s=Math.min(maxW/p.width, maxH/p.height, 1.6);
-  $("frame").style.width=Math.max(120, Math.floor(p.width*s))+"px";
+  $("frame").style.width=Math.max(40, Math.floor(p.width*s))+"px";
 }
 
 function showSvg(svg){
@@ -598,6 +624,50 @@ function addLoadBadges(){
   }
 }
 
+// ---- キャンバスサイズのプリセット（幅×高さ px）
+const SIZE_PRESETS = [
+  ["標準", [["標準（800×500）", 800, 500]]],
+  ["パソコンの画面", [["HD（1280×720）", 1280, 720], ["ノートPC（1366×768）", 1366, 768],
+    ["フルHD（1920×1080）", 1920, 1080], ["WUXGA（1920×1200）", 1920, 1200], ["WQHD（2560×1440）", 2560, 1440],
+    ["4K（3840×2160）", 3840, 2160], ["MacBook Air 13インチ（2560×1664）", 2560, 1664],
+    ["MacBook Pro 14インチ（3024×1964）", 3024, 1964]]],
+  ["スマホ（縦）", [["iPhone 16 / 15（1179×2556）", 1179, 2556], ["iPhone 16 Pro（1206×2622）", 1206, 2622],
+    ["iPhone 16 Pro Max（1320×2868）", 1320, 2868], ["iPhone SE（750×1334）", 750, 1334],
+    ["Android 標準 FHD+（1080×2400）", 1080, 2400], ["Galaxy S24（1080×2340）", 1080, 2340]]],
+  ["タブレット（縦）", [["iPad 第10世代（1640×2360）", 1640, 2360], ["iPad mini（1488×2266）", 1488, 2266],
+    ["iPad Pro 13インチ（2064×2752）", 2064, 2752]]],
+  ["SNS", [["正方形（1080×1080）", 1080, 1080], ["Instagram 縦長（1080×1350）", 1080, 1350],
+    ["ストーリーズ・リール（1080×1920）", 1080, 1920], ["YouTube サムネイル（1280×720）", 1280, 720],
+    ["X ヘッダー（1500×500）", 1500, 500]]],
+  ["印刷（300dpi）", [["A4 横（3508×2480）", 3508, 2480], ["A4 縦（2480×3508）", 2480, 3508],
+    ["はがき 縦（1181×1748）", 1181, 1748]]],
+];
+function fillSizePresets(){
+  const sel=$("size_preset"); sel.innerHTML="";
+  const o0=document.createElement("option"); o0.value=""; o0.textContent="カスタム（下で入力）"; sel.appendChild(o0);
+  for(const [group, items] of SIZE_PRESETS){
+    const g=document.createElement("optgroup"); g.label=group;
+    for(const [name,w,h] of items){ const o=document.createElement("option"); o.value=`${w}x${h}`; o.textContent=name; g.appendChild(o); }
+    sel.appendChild(g);
+  }
+}
+function syncSizePreset(){
+  // 幅・高さに合うプリセットを選択状態に（縦横を入れ替えた状態も同じものとして表示）
+  const w=+$("width").value, h=+$("height").value, sel=$("size_preset");
+  const opts=[...sel.querySelectorAll("option")];
+  const hit=opts.find(o=>o.value===`${w}x${h}`) || opts.find(o=>o.value===`${h}x${w}`);
+  sel.value = hit ? hit.value : "";
+  updatePngLabels();
+}
+function updatePngLabels(){
+  const w=+$("width").value||0, h=+$("height").value||0;
+  for(const o of $("png_scale").options){ const k=+o.value; o.textContent=`PNG ${k}倍（${w*k}×${h*k}）`; }
+}
+function setSize(w,h){
+  $("width").value=w; $("height").value=h;
+  syncSizePreset(); fitFrame(); scheduleAuto();
+}
+
 function scheduleAuto(){
   showVals();
   if(!$("auto").checked){ setStatus("設定を変えました。「生成」を押すと反映されます（自動で生成はオフ）"); return; }
@@ -620,11 +690,18 @@ $("save_svg").onclick=()=>{
 };
 $("save_png").onclick=()=>{
   const p=params(), k=parseInt($("png_scale").value), t=$("transparent").checked;
+  // ブラウザが一度に扱える画像の大きさには上限がある（iPhone・iPad は約1,670万画素）
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const limit=ios ? 16777216 : 268435456, px=p.width*k*p.height*k;
+  if(px>limit){ setStatus(`PNG ${k}倍（${p.width*k}×${p.height*k}）は、このブラウザで書き出せる大きさを超えています。倍率を下げてください（SVGなら大きさの制限はありません）`,true); return; }
   const img=new Image();
   img.onload=()=>{
     const c=document.createElement("canvas"); c.width=p.width*k; c.height=p.height*k;
     c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    c.toBlob(b=>download(baseName()+(k>1?`@${k}x`:"")+(t?"_透過":"")+".png", b),"image/png");
+    c.toBlob(b=>{
+      if(!b){ setStatus("PNG を書き出せませんでした（画像が大きすぎる可能性があります）。倍率を下げてください",true); return; }
+      download(baseName()+(k>1?`@${k}x`:"")+(t?"_透過":"")+".png", b);
+    },"image/png");
   };
   img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(exportSvg());
 };
@@ -678,6 +755,9 @@ $("randomness").addEventListener("change", ()=>recolor(false));
 for (const id of ["max_bends","curves","att_min","att_max","width","height","seed","line_color","bg"])
   $(id).addEventListener("change", scheduleAuto);
 for (const id of ["max_bends","curves"]) $(id).addEventListener("input", showEstimate);
+$("size_preset").onchange=()=>{ const v=$("size_preset").value; if(!v) return; const [w,h]=v.split("x").map(Number); setSize(w,h); };
+$("size_swap").onclick=()=>setSize(+$("height").value, +$("width").value);
+for (const id of ["width","height"]) $(id).addEventListener("input", syncSizePreset);
 $("gen").onclick=()=>generate();
 $("dice").onclick=()=>{ $("seed").value=Math.floor(Math.random()*100000); generate(); };
 $("recolor").onclick=()=>recolor(true);
@@ -741,6 +821,8 @@ $("import_file").onchange=async e=>{
 $("reset_cfg").onclick=()=>{ pendingNote="既定の設定に戻しました"; applySettings(DEFAULTS); };
 
 (async()=>{
+  fillSizePresets(); syncSizePreset();
+  if(matchMedia("(max-width:760px)").matches) $("settings_box").open=false;   // スマホでは「生成」をすぐ見えるように
   addLoadBadges(); showVals(); renderSwatches(); fitFrame();
   if(!SERVER_MODE){
     document.querySelector(".foot").textContent =

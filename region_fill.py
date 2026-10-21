@@ -28,13 +28,13 @@ import time
 
 import numpy as np
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 
 DEFAULT_COLORS = ["#FFE600", "#FF8A1F", "#FFB3C7", "#1EA0E6", "#9ADCF0"]
 
 
 def version_stamp(t=None):
-    """保存名の既定：バージョン名＋年月日時分秒（例: v1.2.0_20261021-111530）。"""
+    """保存名の既定：バージョン名＋年月日時分秒（例: v1.3.0_20261021-111530）。"""
     t = time.localtime() if t is None else t
     return f"v{__version__}_{time.strftime('%Y%m%d-%H%M%S', t)}"
 
@@ -364,7 +364,7 @@ def palette_from_image(path, n=5, seed=0, vivid=True):
 STYLE_PRESETS = [
     {"name": "標準", "desc": "迷ったらこれ", "settings": {}},
     {"name": "繊細", "desc": "細い線で長く、細かな区画",
-     "settings": {"length": 26, "stroke": 0.6, "min_radius": 2, "smooth": 2, "wiggle": 1.4, "pressure": 0.8}},
+     "settings": {"length": 26, "stroke": 0.2, "min_radius": 2, "smooth": 2, "wiggle": 1.4, "pressure": 0.8}},
     {"name": "ゆったり", "desc": "大きな区画とゆるやかな曲線",
      "settings": {"length": 7, "wiggle": 0.25, "min_radius": 3, "smooth": 2, "att_min": 0, "att_max": 0,
                   "avoid": 0.4, "stroke": 1.6, "palette": "テラコッタ"}},
@@ -1632,10 +1632,10 @@ RADIUS_FLOOR_PER_STROKE = 0.75
 
 
 def generate(W=800, H=500, n_curves=1, colors=None, seed=None, randomness=0.5,
-             wiggle=1.0, stroke="1.2%", min_radius="3%", length=12.0, max_bends=0,
+             wiggle=1.0, stroke="0.3%", min_radius="3%", length=12.0, max_bends=0,
              attractors="1-3", pull=0.5, avoid=0.6, smooth=1.0, pressure=0.5, should_stop=None,
              time_limit=60.0):
-    """stroke と min_radius は "1.2%"（短辺に対する比率）か px の数値/文字列で指定。
+    """stroke と min_radius は "0.3%"（短辺に対する比率）か px の数値/文字列で指定。
 
     should_stop: 呼ぶと True を返したら生成を中断する関数（中断時は Cancelled 例外）。
     """
@@ -1752,8 +1752,8 @@ def main():
                    help="線の混んでいる場所を避ける強さ 0〜1（0で回避なし）")
     g.add_argument("--show-attractors", action="store_true", help="PNGプレビューに重心の位置を表示")
     g = ap.add_argument_group("線の見た目")
-    g.add_argument("--stroke", default="1.2%",
-                   help="線の太さ。'1.2%%'（短辺に対する比率）または '6' / '6px'。0 で線なし（塗りだけ）")
+    g.add_argument("--stroke", default="0.3%",
+                   help="線の太さ（既定 0.3%%）。'0.3%%'（短辺に対する比率）または '2' / '2px'。0 で線なし（塗りだけ）")
     g.add_argument("--pressure", type=float, default=0.5,
                    help="線の強弱 0〜1（0=均一。大きいほどカーブで細く、ゆるやかに太さが揺らぐ）")
     g.add_argument("--line-color", default="#111111")

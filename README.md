@@ -12,6 +12,9 @@
 - 計算はすべてお使いのブラウザの中で行うので、読み込んだ画像や設定が外部に送られることはありません
 - 設定はそのブラウザに保存されます（別のパソコンやブラウザへは、「書き出す」「読み込む」で移せます）
 - パソコン版より計算に少し時間がかかります。また、「中断」したときは計算の準備をし直すため、数秒待ちます
+- **スマホでも使えます**：画面の上半分に絵が常に表示され、下半分の設定だけがスクロールします
+
+![スマホ](docs/mobile.png)
 
 ![GUI](docs/gui.png)
 
@@ -64,28 +67,29 @@ GUI は numpy だけで動きます（PNG の書き出しと画像の読み込�
 | 中断 | 生成中に表示される「中断」ボタン、または `Esc` |
 | 色だけ変える | 線はそのままで、塗り分けだけをやり直します |
 | 配色 | カテゴリで絞り込んで選択。🎨 おまかせ配色、🖼 画像から配色（画像をドラッグしても可） |
-| 設定の保存 | 保存名は自動で `v1.2.0_20261021-153045`（バージョン＋年月日-時分秒）。メモを付けると末尾に追加 |
+| 設定の保存 | 保存名は自動で `v1.3.0_20261021-153045`（バージョン＋年月日-時分秒）。メモを付けると末尾に追加 |
 | おすすめ設定 | 設定の一覧の「おすすめ設定」から読み込み（シードは今のまま） |
 | 書き出す / 読み込む | 設定を JSON ファイルでやりとり。コマンドライン版の `--config` でも使えます |
 | 背景を透過 | オンにすると、SVG・PNG とも曲線の外側を透明にして図形だけを保存 |
+| サイズ | パソコンの画面（フルHD・4K など）、スマホ（iPhone・Android）、タブレット、SNS、印刷（A4・はがき）のプリセット。⇄ で縦横を入れ替え |
 
 最後に使った設定と最後に表示した絵は自動で保存され、次回の起動時にすぐ表示されます。保存先は、ブラウザ版はそのブラウザの中、パソコン版は `region_fill_gui.py` と同じフォルダの `region_fill_settings.json` と `region_fill_settings_last.svg` です（`--settings` で変更可）。
 
 ## コマンドライン版の使い方
 
 ```bash
-python region_fill.py --seed 1                       # region_v1.2.0_年月日-時分秒_s1.svg を出力
+python region_fill.py --seed 1                       # region_v1.3.0_年月日-時分秒_s1.svg を出力
 python region_fill.py --seed 1 --png                 # PNG も同じ名前で出力
 python region_fill.py --style 繊細 --palette 夕焼け
 python region_fill.py --palette-from photo.jpg --palette-count 6
 python region_fill.py --transparent --png -o shapes.svg
-python region_fill.py --config region_fill_v1.2.0_20261021-153045.json   # GUI で書き出した設定
+python region_fill.py --config region_fill_v1.3.0_20261021-153045.json   # GUI で書き出した設定
 python region_fill.py --list-styles                  # おすすめ設定の一覧
 python region_fill.py --list-palettes                # 配色プリセットの一覧
 python region_fill.py --help                         # すべてのオプション
 ```
 
-長さの指定（`--stroke`、`--min-radius`）は、`1.2%`（画面の短辺に対する比率）でも `6` / `6px` でも書けます。比率で指定すると、画面サイズを変えても同じ見た目になります。
+長さの指定（`--stroke`、`--min-radius`）は、`0.3%`（画面の短辺に対する比率）でも `2` / `2px` でも書けます。線の太さの既定は `0.3%` です。比率で指定すると、画面サイズを変えても同じ見た目になります。
 
 ## 設定値と負荷（生成時間）
 
