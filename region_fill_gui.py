@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-region_fill.py のGUI（ブラウザで操作）。 v1.4.1
+region_fill.py のGUI（ブラウザで操作）。 v1.5.0
 
   python region_fill_gui.py            # ブラウザが自動で開きます
   python region_fill_gui.py --port 9000 --no-browser
@@ -63,6 +63,8 @@ def api_generate(p):
 
 
 def api_recolor(p):
+    if api.needs_regen(p.get("gen")):            # 元に戻した絵など：線を作り直す必要があるときは生成と同じ手順で
+        api_generate({**p["gen"], "quiet": True})
     out = api.recolor(p)
     if STORE is not None:
         STORE.save_view(out["svg"], out["attractors"])
@@ -185,6 +187,10 @@ class Handler(BaseHTTPRequestHandler):
                 out = api.harmony(p)
             elif self.path == "/api/palette_from_image":
                 out = api.palette_from_image(p)
+            elif self.path == "/api/view":          # 元に戻す・履歴から選んだ絵を、次回の起動用に保存
+                STORE.save_last(p.get("settings") or {})
+                STORE.save_view(p.get("svg", ""), p.get("attractors", []))
+                out = {"ok": True}
             elif self.path == "/api/cancel":
                 out = api_cancel(p)
             elif self.path == "/api/presets/save":

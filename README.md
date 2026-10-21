@@ -65,10 +65,12 @@ GUI は numpy だけで動きます（PNG の書き出しと画像の読み込�
 | --- | --- |
 | 生成 | 値を変えると自動で生成します（オフにもできます）。🎲 でランダムなシード |
 | 中断 | 生成中に表示される「中断」ボタン、または `Esc` |
+| 元に戻す / やり直す | 絵の下の ↶ ↷、または `Ctrl+Z` / `Ctrl+Shift+Z`（Mac は `⌘Z` / `⌘⇧Z`、`Ctrl+Y` も可）。設定と絵がその時の状態に戻ります |
+| 履歴 | 絵の下に、生成・色の変更のたびにサムネイルが並びます（最新40件）。クリックでその時の設定と絵に戻ります。履歴はそのブラウザに保存され、次回も残ります |
 | 🎲 ランダム | 絵の右下の丸いボタン（または `R` キー）。線（太さ・強弱・色）・背景色・サイズはそのままで、形・重心・配色などをランダムにして生成します。重くなりすぎない範囲で選びます |
 | 色だけ変える | 線はそのままで、塗り分けだけをやり直します |
 | 配色 | カテゴリで絞り込んで選択。🎨 おまかせ配色、🖼 画像から配色（画像をドラッグしても可） |
-| 設定の保存 | 保存名は自動で `v1.4.0_20261021-153045`（バージョン＋年月日-時分秒）。メモを付けると末尾に追加 |
+| 設定の保存 | 保存名は自動で `v1.5.0_20261021-153045`（バージョン＋年月日-時分秒）。メモを付けると末尾に追加 |
 | おすすめ設定 | 設定の一覧の「おすすめ設定」から読み込み（シードは今のまま） |
 | 書き出す / 読み込む | 設定を JSON ファイルでやりとり。コマンドライン版の `--config` でも使えます |
 | 背景を透過 | オンにすると、SVG・PNG とも曲線の外側を透明にして図形だけを保存 |
@@ -79,12 +81,12 @@ GUI は numpy だけで動きます（PNG の書き出しと画像の読み込�
 ## コマンドライン版の使い方
 
 ```bash
-python region_fill.py --seed 1                       # region_v1.4.0_年月日-時分秒_s1.svg を出力
+python region_fill.py --seed 1                       # region_v1.5.0_年月日-時分秒_s1.svg を出力
 python region_fill.py --seed 1 --png                 # PNG も同じ名前で出力
 python region_fill.py --style 繊細 --palette 夕焼け
 python region_fill.py --palette-from photo.jpg --palette-count 6
 python region_fill.py --transparent --png -o shapes.svg
-python region_fill.py --config region_fill_v1.4.0_20261021-153045.json   # GUI で書き出した設定
+python region_fill.py --config region_fill_v1.5.0_20261021-153045.json   # GUI で書き出した設定
 python region_fill.py --list-styles                  # おすすめ設定の一覧
 python region_fill.py --list-palettes                # 配色プリセットの一覧
 python region_fill.py --help                         # すべてのオプション

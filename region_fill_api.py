@@ -56,8 +56,37 @@ def generate(p, should_stop=None):
     }
 
 
-def recolor(p):
-    """直近の線と区画はそのままで、色だけ塗り直す。"""
+# 線・区画（と線の強弱）を決める設定。色数も乱数の進み方に影響するので含める
+GEN_KEYS = ("width", "height", "curves", "seed", "randomness", "wiggle", "stroke", "min_radius", "length",
+            "max_bends", "att_min", "att_max", "pull", "avoid", "smooth", "pressure")
+
+
+def _gen_key(p):
+    def norm(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return str(v)
+    return tuple(norm(p.get(k)) for k in GEN_KEYS) + (len([c for c in p.get("colors", []) if c]),)
+
+
+def needs_regen(gen):
+    """gen（表示中の絵を作った設定）と、手元にある直近の結果が違うか。"""
+    if not gen:
+        return False
+    last = _state["last"]
+    return last is None or _gen_key(last["params"]) != _gen_key(gen)
+
+
+def recolor(p, should_stop=None):
+    """直近の線と区画はそのままで、色だけ塗り直す。
+
+    p["gen"]（表示中の絵を作った設定）が直近の結果と違うとき（元に戻す・履歴から選んだあと等）は、
+    同じ設定で線を作り直してから塗る（同じ設定なら同じ線になる）。
+    """
+    gen = p.get("gen")
+    if needs_regen(gen):
+        generate(gen, should_stop=should_stop)
     last = _state["last"]
     if last is None:
         raise ValueError("まだ準備中です（前回の絵を再計算しています）。少し待ってからもう一度お試しください。")

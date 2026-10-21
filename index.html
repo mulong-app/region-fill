@@ -60,7 +60,7 @@ button:disabled{opacity:.5;cursor:default}
 .harmony{display:grid;grid-template-columns:1fr auto;gap:6px}
 .colors2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .colors2 input[type=color]{width:100%;height:28px;border:1px solid var(--line);border-radius:6px;background:none;padding:0}
-main{display:grid;grid-template-rows:auto 1fr auto;min-width:0}
+main{display:grid;grid-template-rows:auto 1fr auto auto;min-width:0}
 .bar{display:flex;gap:8px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
 .bar .grow{flex:1}
 .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -90,15 +90,32 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
 .btnrow{display:flex;gap:6px;flex-wrap:wrap}
 .btnrow button{flex:1}
 .empty{color:var(--muted)}
+/* 履歴（サムネイル）と 元に戻す・やり直す */
+.hist{display:flex;align-items:center;gap:8px;padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);min-width:0}
+.hist .hbtn{display:flex;gap:4px;flex:0 0 auto}
+.hist .hbtn button{width:34px;height:34px;padding:0;font-size:17px;line-height:1}
+.hist .hbtn button:disabled{opacity:.35;cursor:default}
+.hist .hlist{display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;padding:2px;scrollbar-width:thin}
+.hist .hlist:empty::before{content:"生成した絵がここに並びます（クリックでその時の設定と絵に戻ります）";color:var(--muted);font-size:11px;align-self:center;white-space:nowrap}
+.hthumb{flex:0 0 auto;height:52px;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff;position:relative;cursor:pointer}
+.hthumb img{display:block;height:100%;width:auto;max-width:120px;object-fit:contain}
+.hthumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.hthumb .n{position:absolute;left:2px;top:2px;font-size:9px;line-height:1;padding:2px 3px;border-radius:3px;background:rgba(255,255,255,.8);color:var(--ink)}
+.hthumb.future{opacity:.55}
+.hist .hclear{flex:0 0 auto;font-size:11px;padding:4px 8px;color:var(--muted)}
 .foot{padding:8px 18px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);background:var(--panel)}
 /* スマホ・狭い画面：上半分に絵を常に表示し、下半分の設定だけをスクロール */
 @media (max-width:760px){
   .dice{right:12px;bottom:12px;width:58px;height:58px;font-size:11px}
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:50vh minmax(0,1fr);height:100vh;height:100dvh}
-  main{grid-row:1;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);border-bottom:1px solid var(--line);min-height:0}
+  main{grid-row:1;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;border-bottom:1px solid var(--line);min-height:0}
   .bar,.tools{min-width:0}
   aside{grid-row:2;border-right:0;min-height:0;padding:12px 14px 40px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   .foot{display:none}
+  .hist{padding:5px 8px;gap:6px}
+  .hist .hbtn button{width:30px;height:30px;font-size:15px}
+  .hthumb{height:40px}
+  .hist .hclear{display:none}
   .bar{padding:6px 10px;gap:6px}
   .bar{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:4px}
   .bar .status.grow{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -220,6 +237,11 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
     </div>
     <button class="dice" id="randomize" title="線（太さ・強弱・色）・背景・サイズ以外の設定をランダムにして生成（R キー）"><span class="ic">🎲</span>ランダム</button>
   </div>
+  <div class="hist" id="hist">
+    <div class="hbtn"><button id="undo" title="元に戻す（Ctrl+Z / ⌘Z）" disabled>↶</button><button id="redo" title="やり直す（Ctrl+Shift+Z / ⌘⇧Z / Ctrl+Y）" disabled>↷</button></div>
+    <div class="hlist" id="hist_list"></div>
+    <button class="hclear" id="hist_clear" title="履歴をすべて消す（今の絵はそのまま）">履歴を消す</button>
+  </div>
   <div class="foot">プレビューは保存される SVG そのものです。PNG はブラウザ内で SVG から書き出します。</div>
 </main>
 </div>
@@ -230,6 +252,7 @@ let curCat = "すべて", selPal = "ポップ", palOverride = false;
 let colors = PALETTES[0].colors.slice();
 let colorSeed = 1;
 let lastSvg = null, lastAttractors = [], reqId = 0, timer = null;
+let curGen = null;     // 表示中の絵（線・区画）を作った設定。元に戻したあとの「色だけ変える」で使う
 const $ = id => document.getElementById(id);
 const sliders = {length:v=>v+"倍", wiggle:v=>v, min_radius:v=>v+"%", smooth:v=>v, pull:v=>v, avoid:v=>v,
                  stroke:v=>v==0?"なし":v+"%", pressure:v=>v==0?"均一":v, randomness:v=>v};
@@ -469,6 +492,7 @@ const Web = (()=>{
         return j;
       }
       case "/api/recolor": { const j=await call("recolor", body); saveView(j.svg, j.attractors); return j; }
+      case "/api/view": { const d=load(); d.last=body.settings; save(d); saveView(body.svg, body.attractors); return {ok:true}; }
       case "/api/harmony": return call("harmony", body);
       case "/api/palette_from_image": return call("palette_from_image", body);
       case "/api/cancel": restart(); return {ok:true};
@@ -548,10 +572,12 @@ async function generate(quiet){
     if(id!==reqId) return;                         // 新しい生成が始まっていたら捨てる
     if(j.cancelled){ if(!quiet) setStatus("中断しました（プレビューは直前のままです）"); return; }
     if(quiet){ lastAttractors=j.attractors; drawOverlay(); return; }
-    lastAttractors=j.attractors; showSvg(j.svg);
+    lastAttractors=j.attractors; showSvg(j.svg); curGen=p;
     // 生成中に配色や線・背景の色が変わっていたら、今の色で塗り直す（古い色の結果で上書きしない）
     const now=params();
-    if(JSON.stringify(now.colors)!==JSON.stringify(p.colors) || now.line_color!==p.line_color || now.bg!==p.bg) recolor(false);
+    const stale=JSON.stringify(now.colors)!==JSON.stringify(p.colors) || now.line_color!==p.line_color || now.bg!==p.bg;
+    Hist.push(stale ? {...snapshot(), settings:{...histSettings(), colors:p.colors, line_color:p.line_color, bg:p.bg}} : snapshot());
+    if(stale) recolor(false, true);
     const s=j.stats;
     learnSpeed(p, s.seconds); showEstimate();
     let t=`区画 ${s.faces} ・ 交点 ${s.crossings} ・ 線 ${s.stroke_px}px ・ 最小半径 ${s.min_radius_px}px`;
@@ -565,7 +591,7 @@ async function generate(quiet){
 }
 
 let recolorId=0;
-async function recolor(newSeed){
+async function recolor(newSeed, replaceHist){
   if(!lastSvg) return;
   const rid=++recolorId;
   if(colors.length<4){ setStatus("色は4色以上にしてください",true); return; }
@@ -573,9 +599,11 @@ async function recolor(newSeed){
   const p=params();
   try{
     const j=await post("/api/recolor",{colors:p.colors, randomness:p.randomness, color_seed:colorSeed,
-                                        line_color:p.line_color, bg:p.bg});
-    if(rid!==recolorId) return;                    // 後から押した操作の結果を優先する
+                                        line_color:p.line_color, bg:p.bg, gen:curGen});
+    if(rid!==recolorId || j.cancelled) return;     // 後から押した操作の結果を優先する
     showSvg(j.svg);
+    Hist.push(snapshot(), !!replaceHist);
+    persistView();
   }catch(e){ setStatus(e.message,true); }
 }
 
@@ -677,6 +705,111 @@ function setSize(w,h){
   $("width").value=w; $("height").value=h;
   syncSizePreset(); fitFrame(); scheduleAuto();
 }
+
+// ---- 履歴・元に戻す・やり直す
+// 生成・色だけ変える のたびに、その時の設定と絵（SVG）を1件として記録する。
+// 記録はこのブラウザの中（IndexedDB）に最大 HIST_MAX 件。サムネイルは SVG をそのまま縮小表示
+function histSettings(){
+  const {auto, show_att, png_scale, ver, ...s}=params(); return s;
+}
+function snapshot(){
+  return {settings:histSettings(), gen:curGen, svg:lastSvg, attractors:lastAttractors, colorSeed, time:Date.now()};
+}
+function persistView(){
+  // 次回の起動時に、この絵と設定から始められるように保存（gen は線を作った設定）
+  post("/api/view",{settings:{...params(), gen:curGen}, svg:lastSvg, attractors:lastAttractors}).catch(()=>{});
+}
+const HIST_MAX=40;
+const Hist=(()=>{
+  let items=[], pos=-1, db=null, seq=0;
+  function openDb(){
+    return new Promise(res=>{
+      try{
+        const r=indexedDB.open("region_fill",1);
+        r.onupgradeneeded=()=>r.result.createObjectStore("history",{keyPath:"id"});
+        r.onsuccess=()=>{ db=r.result; res(); };
+        r.onerror=r.onblocked=()=>res();
+      }catch(e){ res(); }
+    });
+  }
+  function store(mode){ try{ return db ? db.transaction("history",mode).objectStore("history") : null; }catch(e){ return null; } }
+  const strip=({_url,...e})=>e;
+  function put(e){ const s=store("readwrite"); if(s) try{ s.put(strip(e)); }catch(err){} }
+  function del(e){ const s=store("readwrite"); if(s) try{ s.delete(e.id); }catch(err){} if(e._url) URL.revokeObjectURL(e._url); }
+  async function load(){
+    await openDb();
+    const s=store("readonly"); if(!s) return;
+    await new Promise(res=>{
+      try{
+        const r=s.getAll();
+        r.onsuccess=()=>{ items=(r.result||[]).filter(e=>e&&e.svg).sort((a,b)=>a.id-b.id); res(); };
+        r.onerror=()=>res();
+      }catch(e){ res(); }
+    });
+    while(items.length>HIST_MAX) del(items.shift());
+    pos=items.length-1; render();
+  }
+  function push(e, replace){
+    if(!e.svg) return;
+    if(replace && pos>=0){ const old=items[pos]; if(old._url) URL.revokeObjectURL(old._url); items[pos]={...e, id:old.id}; put(items[pos]); render(); return; }
+    if(pos>=0 && items[pos].svg===e.svg) return;            // 同じ絵は重ねて記録しない
+    for(const x of items.splice(pos+1)) del(x);            // 元に戻したあとの新しい操作で、先の履歴は消える
+    e.id=Date.now()*100+(seq++%100); items.push(e);
+    while(items.length>HIST_MAX) del(items.shift());
+    pos=items.length-1; put(e); render();
+  }
+  function go(i){
+    if(i<0 || i>=items.length || i===pos) return;
+    pos=i; restore(items[i]); render();
+  }
+  function restore(e){
+    // 走っている生成は止めて結果を捨てる（パソコン版。ブラウザ版は止めると準備し直しになるので結果だけ捨てる）
+    const running=$("busy").classList.contains("on");
+    clearTimeout(timer); ++reqId; setBusy(false);
+    if(running && SERVER_MODE) post("/api/cancel",{}).catch(()=>{});
+    applySettings({...e.settings, auto:undefined}, false);
+    colorSeed=e.colorSeed||1; curGen=e.gen; lastAttractors=e.attractors||[];
+    showSvg(e.svg); persistView();
+    const d=new Date(e.time), z=n=>String(n).padStart(2,"0");
+    setStatus(`履歴 ${pos+1}/${items.length}（${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}）に戻しました。シード ${e.settings.seed}`);
+  }
+  function clear(){
+    for(const x of items.splice(0)) del(x);
+    pos=-1; if(lastSvg) push(snapshot()); else render();
+    setStatus("履歴を消しました（今の絵だけ残しています）");
+  }
+  function render(){
+    const box=$("hist_list"); box.innerHTML="";
+    items.forEach((e,i)=>{
+      if(!e._url) e._url=URL.createObjectURL(new Blob([e.svg],{type:"image/svg+xml"}));
+      const b=document.createElement("button"); b.className="hthumb"+(i===pos?" sel":"")+(i>pos?" future":"");
+      const d=new Date(e.time), z=n=>String(n).padStart(2,"0");
+      b.title=`${i+1}. ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())} ・ シード ${e.settings.seed}`+(e.settings.palette?` ・ 配色「${e.settings.palette}」`:"");
+      const img=document.createElement("img"); img.src=e._url; img.alt=""; img.loading="lazy"; img.decoding="async";
+      const n=document.createElement("span"); n.className="n"; n.textContent=i+1;
+      b.append(img,n); b.onclick=()=>go(i); box.appendChild(b);
+    });
+    const sel=box.children[pos];
+    if(sel){ const l=sel.offsetLeft-box.offsetLeft, r=l+sel.offsetWidth;
+      if(l<box.scrollLeft) box.scrollLeft=l-4; else if(r>box.scrollLeft+box.clientWidth) box.scrollLeft=r-box.clientWidth+4; }
+    $("undo").disabled=pos<=0; $("redo").disabled=pos>=items.length-1;
+  }
+  function find(svg){ for(let i=items.length-1;i>=0;i--) if(items[i].svg===svg) return i; return -1; }
+  function select(i){ pos=i; render(); }            // 絵は変えずに、選択位置だけ合わせる（起動時）
+  return {load, push, clear, find, select, undo:()=>go(pos-1), redo:()=>go(pos+1), get current(){ return items[pos]; },
+          get length(){ return items.length; }, get pos(){ return pos; }};
+})();
+$("undo").onclick=()=>Hist.undo();
+$("redo").onclick=()=>Hist.redo();
+$("hist_clear").onclick=()=>{ if(confirm("履歴をすべて消しますか？（今の絵はそのまま残ります）")) Hist.clear(); };
+document.addEventListener("keydown",e=>{
+  if(!(e.ctrlKey||e.metaKey) || e.altKey) return;
+  const a=document.activeElement;
+  if(a && (a.tagName==="TEXTAREA" || (a.tagName==="INPUT" && /^(text|number|search)$/.test(a.type)))) return;   // 入力欄の中は文字の取り消しを優先
+  const k=e.key.toLowerCase();
+  if(k==="z" && !e.shiftKey){ e.preventDefault(); Hist.undo(); }
+  else if((k==="z" && e.shiftKey) || k==="y"){ e.preventDefault(); Hist.redo(); }
+});
 
 // ---- ランダム：線（太さ・強弱・色）・背景・サイズ以外を、重くなりすぎない範囲でランダムに
 function randomizeAll(){
@@ -872,6 +1005,7 @@ $("reset_cfg").onclick=()=>{ pendingNote="既定の設定に戻しました"; ap
   await loadPalettes();
   if(!SERVER_MODE){ setBusy(false); $("cancel").style.display=""; }
   DEFAULTS=params();
+  await Hist.load();
   try{
     const data=await getJSON("/api/settings");
     fillPresets(data.presets||{});
@@ -884,6 +1018,10 @@ $("reset_cfg").onclick=()=>{ pendingNote="既定の設定に戻しました"; ap
     if(data.last && data.view && data.view.svg && !migrated){
       // 前回の絵をすぐに表示し、「色だけ変える」等に必要な計算だけ裏で行う
       lastAttractors=data.view.attractors||[]; showSvg(data.view.svg);
+      curGen=data.last.gen || data.last;
+      const hi=Hist.find(data.view.svg);              // 前回最後に表示していた絵が履歴にあれば、そこを選んだ状態から始める
+      if(hi<0) Hist.push(snapshot());
+      else { Hist.select(hi); colorSeed=Hist.current.colorSeed||1; }
       setStatus(pendingNote.replace("復元しました","復元し、前回の絵を表示しています")); pendingNote="";
       generate(true);
       return;
