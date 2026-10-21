@@ -73,6 +73,14 @@ main{display:grid;grid-template-rows:auto 1fr auto;min-width:0}
 .overlay{position:absolute;inset:0;pointer-events:none}
 .busy{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(244,243,239,.45);font-weight:600;line-height:1.4}
 .busy.on{display:flex}
+.dice{position:absolute;right:18px;bottom:18px;z-index:5;width:68px;height:68px;border-radius:50%;padding:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1.1;
+  font-size:12px;font-weight:700;color:#1a1a1a;background:rgba(255,255,255,.55);
+  border:1px solid rgba(0,0,0,.12);box-shadow:0 4px 18px rgba(0,0,0,.18);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);cursor:pointer;transition:transform .12s,background .12s}
+.dice .ic{font-size:22px;line-height:1}
+.dice:hover{background:rgba(255,255,255,.8)}
+.dice:active{transform:scale(.92)}
 .busy .card{display:flex;flex-direction:column;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 26px;box-shadow:0 6px 24px rgba(0,0,0,.12)}
 .busy button{font-weight:600;padding:7px 22px;background:#fff}
 .busy .sec{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -85,6 +93,7 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
 .foot{padding:8px 18px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);background:var(--panel)}
 /* スマホ・狭い画面：上半分に絵を常に表示し、下半分の設定だけをスクロール */
 @media (max-width:760px){
+  .dice{right:12px;bottom:12px;width:58px;height:58px;font-size:11px}
   .app{grid-template-columns:minmax(0,1fr);grid-template-rows:50vh minmax(0,1fr);height:100vh;height:100dvh}
   main{grid-row:1;grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);border-bottom:1px solid var(--line);min-height:0}
   .bar,.tools{min-width:0}
@@ -209,6 +218,7 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
       <svg class="overlay" id="overlay"></svg>
       <div class="busy" id="busy"><div class="card"><div><span id="busy_label">生成中…</span> <span class="sec" id="busy_sec"></span></div><button id="cancel">中断</button><div class="sec">Esc キーでも中断できます</div></div></div>
     </div>
+    <button class="dice" id="randomize" title="線（太さ・強弱・色）・背景・サイズ以外の設定をランダムにして生成（R キー）"><span class="ic">🎲</span>ランダム</button>
   </div>
   <div class="foot">プレビューは保存される SVG そのものです。PNG はブラウザ内で SVG から書き出します。</div>
 </main>
@@ -667,6 +677,34 @@ function setSize(w,h){
   $("width").value=w; $("height").value=h;
   syncSizePreset(); fitFrame(); scheduleAuto();
 }
+
+// ---- ランダム：線（太さ・強弱・色）・背景・サイズ以外を、重くなりすぎない範囲でランダムに
+function randomizeAll(){
+  const r=(a,b,step)=>{ const n=Math.round((a+Math.random()*(b-a))/step); return +(n*step).toFixed(2); };
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const amin=pick([0,1,1,1,2]), amax=Math.max(amin, pick([1,2,3]));
+  // 線・背景の色を変えない配色だけから選ぶ（背景が黒前提の配色などは除く）
+  const pals=PALETTES.filter(p=>!p.line && !p.bg);
+  const pal=pick(pals.length?pals:PALETTES);
+  // 線の本数×長さで負荷が増えるので、本数が多いときは短めに（スマホのブラウザ版でも数秒以内に収まる範囲）
+  const curves=pick([1,1,1,2,2,3]), len=curves===1 ? r(8,22,1) : curves===2 ? r(7,14,1) : r(6,10,1);
+  // 「交差までの曲がり」の制限は、最小半径が大きいと作れないことがあるので、制限するときは半径を小さめに
+  const bends=pick([0,0,0,0,5,6,8]);
+  const st={seed:Math.floor(Math.random()*100000), length:len, wiggle:r(0.5,2.2,0.1),
+    min_radius:bends ? r(1,2.5,0.5) : r(1,4,0.5), smooth:r(0.6,2,0.1), max_bends:String(bends),
+    curves:String(curves), att_min:amin, att_max:amax,
+    pull:r(0,0.9,0.05), avoid:r(0.3,0.9,0.05), randomness:r(0.2,1,0.05),
+    colors:pal.colors.slice(), palette:pal.name};
+  colorSeed=1;
+  pendingNote=`ランダム（配色「${pal.name}」）`;
+  applySettings(st);
+}
+$("randomize").onclick=randomizeAll;
+document.addEventListener("keydown",e=>{
+  if((e.key==="r"||e.key==="R") && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)){
+    e.preventDefault(); randomizeAll();
+  }
+});
 
 function scheduleAuto(){
   showVals();
