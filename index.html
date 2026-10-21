@@ -101,7 +101,6 @@ input[type=text]{width:100%;padding:5px 7px;border:1px solid var(--line);border-
 .hthumb img{display:block;height:100%;width:auto;max-width:120px;object-fit:contain}
 .hthumb.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
 .hthumb .n{position:absolute;left:2px;top:2px;font-size:9px;line-height:1;padding:2px 3px;border-radius:3px;background:rgba(255,255,255,.8);color:var(--ink)}
-.hthumb.future{opacity:.55}
 .hist .hclear{flex:0 0 auto;font-size:11px;padding:4px 8px;color:var(--muted)}
 .foot{padding:8px 18px;color:var(--muted);font-size:11px;border-top:1px solid var(--line);background:var(--panel)}
 /* スマホ・狭い画面：上半分に絵を常に表示し、下半分の設定だけをスクロール */
@@ -753,7 +752,7 @@ const Hist=(()=>{
     if(!e.svg) return;
     if(replace && pos>=0){ const old=items[pos]; if(old._url) URL.revokeObjectURL(old._url); items[pos]={...e, id:old.id}; put(items[pos]); render(); return; }
     if(pos>=0 && items[pos].svg===e.svg) return;            // 同じ絵は重ねて記録しない
-    for(const x of items.splice(pos+1)) del(x);            // 元に戻したあとの新しい操作で、先の履歴は消える
+    // 元に戻したあとに新しく操作しても、先の履歴は消さずに残し、新しい絵は末尾に追加する
     e.id=Date.now()*100+(seq++%100); items.push(e);
     while(items.length>HIST_MAX) del(items.shift());
     pos=items.length-1; put(e); render();
@@ -782,7 +781,7 @@ const Hist=(()=>{
     const box=$("hist_list"); box.innerHTML="";
     items.forEach((e,i)=>{
       if(!e._url) e._url=URL.createObjectURL(new Blob([e.svg],{type:"image/svg+xml"}));
-      const b=document.createElement("button"); b.className="hthumb"+(i===pos?" sel":"")+(i>pos?" future":"");
+      const b=document.createElement("button"); b.className="hthumb"+(i===pos?" sel":"");
       const d=new Date(e.time), z=n=>String(n).padStart(2,"0");
       b.title=`${i+1}. ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())} ・ シード ${e.settings.seed}`+(e.settings.palette?` ・ 配色「${e.settings.palette}」`:"");
       const img=document.createElement("img"); img.src=e._url; img.alt=""; img.loading="lazy"; img.decoding="async";
